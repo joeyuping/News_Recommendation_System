@@ -142,9 +142,12 @@ if prompt := st.chat_input("Ask a question about the news articles..."):
                     context = "\n\n".join([doc.page_content for doc in docs])
                     
                     # Create prompt with context
-                    system_prompt = f"""You are an AI assistant that helps recommend news articles related to the user query and summarizes the articles. Use the following context to answer the user's question. If you don't know the answer based on the context, say so.
+                    system_prompt = f"""You are an AI assistant that helps recommend news articles related to the user query and summarizes the articles. Use the following context to answer the user's question. 
 
-                    NOTE: Answer in the language that the user uses.
+                    NOTE: 
+                    - Answer in the language that the user uses, either in English or Chinese.
+                    - If you don't know the answer based on the context, say so.
+                    - If the context could not answer the question, say so.
                     
                     CONTEXT:
                     {context}
@@ -152,7 +155,9 @@ if prompt := st.chat_input("Ask a question about the news articles..."):
                     USER QUESTION:
                     {prompt}
                     
-                    Answer the question based only on the provided context. Structure your response by first providing the list of recommended news articles, stating their news agency, title and urls. Then summarize the articles.
+                    Answer the question based only on the provided context. Structure your response by first providing the list of recommended news articles in the format :
+                    - **title** - agency (hyperlink to url)
+                    Then summarize the articles.
 
                     ANSWER:
                     """
@@ -160,7 +165,7 @@ if prompt := st.chat_input("Ask a question about the news articles..."):
                     # Direct questioning without retrieval
                     system_prompt = f"""You are an AI assistant that helps recommend news articles related to the user query.
 
-                    NOTE: Answer in the language that the user uses.
+                    NOTE: Answer in the language that the user uses, either in English or Chinese.
                     
                     USER QUESTION:
                     {prompt}.
