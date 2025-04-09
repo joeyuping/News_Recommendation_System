@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NewsAPI Data Fetcher</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #results {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            white-space: pre-wrap;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <h1>NewsAPI Data Fetcher</h1>
+    <p>This tool fetches news data from NewsAPI.org and allows you to save it as a JSON file.</p>
+    
+    <div class="form-group">
+        <label for="keyword">Keyword:</label>
+        <input type="text" id="keyword" value="earthquake OR flood OR hurricane OR typhoon">
+    </div>
+    
+    <div class="form-group">
+        <label for="apiKey">API Key:</label>
+        <input type="text" id="apiKey" value="f4b6348f8e5740b7a0a0fde0b65d2573">
+    </div>
+    
+    <div class="form-group">
+        <label for="fromDate">From Date (YYYY-MM-DD):</label>
+        <input type="date" id="fromDate" value="2025-01-01">
+    </div>
+    
+    <div class="form-group">
+        <label for="toDate">To Date (YYYY-MM-DD):</label>
+        <input type="date" id="toDate" value="2025-04-09">
+    </div>
+    
+    <div class="form-group">
+        <label for="language">Language:</label>
+        <select id="language">
+            <option value="zh">Chinese (zh)</option>
+            <option value="en" selected>English (en)</option>
+            <option value="ja">Japanese (ja)</option>
+            <option value="ko">Korean (ko)</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="sortBy">Sort By:</label>
+        <select id="sortBy">
+            <option value="relevancy" selected>Relevancy</option>
+            <option value="popularity">Popularity</option>
+            <option value="publishedAt">Published At</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="pageSize">Page Size (max 100):</label>
+        <input type="number" id="pageSize" min="1" max="100" value="100">
+    </div>
+    
+    <button onclick="fetchNews()">Fetch News Data</button>
+    <button onclick="saveData()" id="saveButton" disabled>Save to JSON File</button>
+    
+    <div id="results">Results will appear here...</div>
+    
+    <script>
+        let newsData = null;
+        
+        async function fetchNews() {
+            const keyword = document.getElementById('keyword').value;
+            const apiKey = document.getElementById('apiKey').value;
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+            const language = document.getElementById('language').value;
+            const sortBy = document.getElementById('sortBy').value;
+            const pageSize = document.getElementById('pageSize').value;
+            
+            if (!keyword || !apiKey) {
+                alert('Keyword and API Key are required!');
+                return;
+            }
+            
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.textContent = 'Fetching data...';
+            
+            try {
+                const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(keyword)}&from=${fromDate}&to=${toDate}&language=${language}&sortBy=${sortBy}&pageSize=${pageSize}&apiKey=${apiKey}`;
+                
+                const response = await fetch(url);
+                
+                if (response.status === 200) {
+                    const data = await response.json();
+                    newsData = data.articles;
+                    
+                    resultsDiv.textContent = `Successfully fetched ${newsData.length} articles.\n\nPreview of first 3 articles:\n\n`;
+                    
+                    // Show preview of first 3 articles
+                    for (let i = 0; i < Math.min(3, newsData.length); i++) {
+                        const article = newsData[i];
+                        resultsDiv.textContent += `${i+1}. ${article.title}\n   Source: ${article.source.name}\n   Published: ${article.publishedAt}\n\n`;
+                    }
+                    
+                    document.getElementById('saveButton').disabled = false;
+                } else {
+                    resultsDiv.textContent = `Error: ${response.status}\n${await response.text()}`;
+                }
+            } catch (error) {
+                resultsDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        function saveData() {
+            if (!newsData) {
+                alert('No data to save. Please fetch data first.');
+                return;
+            }
+            
+            const keyword = document.getElementById('keyword').value;
+            const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            const filename = `news_${keyword.substring(0, 20).replace(/\s+/g, '_')}_${date}.json`;
+            
+            const dataStr = JSON.stringify(newsData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            document.getElementById('results').textContent += `\nData saved to ${filename}`;
+        }
+    </script>
+</body>
+</html>
