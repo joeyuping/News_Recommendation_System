@@ -1,5 +1,4 @@
 import streamlit as st
-import torch
 import pickle
 import os
 import google.generativeai as genai
@@ -17,8 +16,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Check if CUDA is available
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cpu"
 
 # Function to load documents and create retriever
 @st.cache_resource

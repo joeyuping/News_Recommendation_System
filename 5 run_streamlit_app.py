@@ -11,6 +11,6 @@ os.environ["STREAMLIT_SERVER_WATCH_FILES"] = "false"
 
 # Run the Streamlit app
 subprocess.run(
-    [sys.executable, "-m", "streamlit", "run", "news_rag_app.py", "--server.fileWatcherType", "none"],
+    [sys.executable, "-m", "streamlit", "run", "4 news_rag_app.py", "--server.fileWatcherType", "none"],
     check=True
 )
