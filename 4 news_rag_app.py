@@ -33,7 +33,6 @@ def load_retriever():
             # This is safe because we created this index ourselves
             db = FAISS.load_local("faiss_news_index", embeddings, allow_dangerous_deserialization=True)
             st.sidebar.success("Successfully loaded FAISS index!")
-            return db.as_retriever(search_kwargs={"k": 5})
         else:
             # Load from pickle file if FAISS index doesn't exist
             try:
@@ -61,7 +60,7 @@ def load_retriever():
             db.save_local("faiss_news_index")
             st.sidebar.success("Created and saved new FAISS index!")
             
-            return db.as_retriever(search_kwargs={"k": 5})
+        return db.as_retriever(search_kwargs={"score_threshold": 0.7})
     except Exception as e:
         st.sidebar.error(f"Error loading retriever: {str(e)}")
         return None
