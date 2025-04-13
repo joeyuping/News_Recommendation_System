@@ -60,7 +60,7 @@ def load_retriever():
             db.save_local("faiss_news_index")
             st.sidebar.success("Created and saved new FAISS index!")
             
-        return db.as_retriever(search_kwargs={"k": 5})
+        return db.as_retriever(search_kwargs={"score_threshold": 0.3})
     except Exception as e:
         st.sidebar.error(f"Error loading retriever: {str(e)}")
         return None
