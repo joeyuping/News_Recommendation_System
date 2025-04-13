@@ -75,9 +75,6 @@ This app uses Retrieval Augmented Generation (RAG) with the Gemini 2.0 API to re
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Load retriever
-retriever = load_retriever()
-
 # API Key handling
 try:
     # Try to load API key from secrets
@@ -95,6 +92,9 @@ except Exception as e:
     else:
         st.sidebar.warning("Please enter your Google API Key to continue")
         model_configured = False
+
+# Load retriever
+retriever = load_retriever()
 
 # Add toggle for using retriever
 use_retriever = st.sidebar.checkbox("Use Retriever (RAG)", value=True, 
