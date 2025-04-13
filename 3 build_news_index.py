@@ -10,7 +10,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {device}")
 
 # Load the JSON file with explicit UTF-8 encoding
-with open('./news_earthquake_OR_flood__20250409_full.json', 'r', encoding='utf-8') as file:
+with open('./news.json', 'r', encoding='utf-8') as file:
     data = json.load(file)
 
 # Extract the full content from each item
@@ -43,16 +43,14 @@ archive_data = [
     if text
 ]
 
-# Split into chunks
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
-docs = text_splitter.split_documents(archive_data)
-
 print(f"Loaded {len(archive_data)} documents")
-print(f"Split into {len(docs)} chunks")
+
+# Instead of splitting into chunks, use the whole articles
+docs = archive_data
 
 # Build FAISS vectorstore from documents using HuggingFace embeddings
 embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-l6-v2", 
+    model_name="sentence-transformers/distiluse-base-multilingual-cased-v1", 
     model_kwargs={'device': device}
 )
 print(f"Embedding model loaded on {device}")

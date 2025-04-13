@@ -26,13 +26,16 @@ def load_retriever():
         if os.path.exists("faiss_news_index"):
             # Load embeddings
             embeddings = HuggingFaceEmbeddings(
-                model_name="sentence-transformers/all-MiniLM-l6-v2", 
+                model_name="sentence-transformers/distiluse-base-multilingual-cased-v1", 
                 model_kwargs={'device': device}
             )
             # Load FAISS index with allow_dangerous_deserialization set to True
             # This is safe because we created this index ourselves
             db = FAISS.load_local("faiss_news_index", embeddings, allow_dangerous_deserialization=True)
             st.sidebar.success("Successfully loaded FAISS index!")
+            
+            # Debug info
+            print(f"FAISS index loaded with {db.index.ntotal} vectors")
         else:
             # Load from pickle file if FAISS index doesn't exist
             try:
@@ -49,7 +52,7 @@ def load_retriever():
             
             # Create embeddings
             embeddings = HuggingFaceEmbeddings(
-                model_name="sentence-transformers/all-MiniLM-l6-v2", 
+                model_name="sentence-transformers/distiluse-base-multilingual-cased-v1", 
                 model_kwargs={'device': device}
             )
             
@@ -60,7 +63,10 @@ def load_retriever():
             db.save_local("faiss_news_index")
             st.sidebar.success("Created and saved new FAISS index!")
             
-        return db.as_retriever(search_kwargs={"k": 5})
+            # Debug info
+            print(f"FAISS index created with {db.index.ntotal} vectors")
+            
+        return db.as_retriever(search_kwargs={"k": 3})
     except Exception as e:
         st.sidebar.error(f"Error loading retriever: {str(e)}")
         return None
@@ -68,7 +74,7 @@ def load_retriever():
 # Main UI
 st.title("📰 News RAG Recommender System")
 st.markdown("""
-This app uses Retrieval Augmented Generation (RAG) with the Gemini 2.0 API to recommend news articles.
+This app uses Retrieval Augmented Generation (RAG) with the Gemini 1.5 Pro API to recommend news articles.
 """)
 
 # Initialize session state for chat history
@@ -78,16 +84,17 @@ if "messages" not in st.session_state:
 # API Key handling
 try:
     # Try to load API key from secrets
-    api_key = st.secrets["GOOGLE_API_KEY"]
-    genai.configure(api_key=api_key)
-    st.sidebar.success("API key loaded from secrets successfully!")
-    model_configured = True
+    api_key = st.secrets["google"]["api_key"]
+    if api_key:
+        genai.configure(api_key=api_key)
+        st.sidebar.success("API Key loaded from secrets!")
+        model_configured = True
+    else:
+        raise ValueError("API key is empty")
 except Exception as e:
-    # Fall back to manual input if secrets not available
     api_key = st.sidebar.text_input("Enter your Google API Key:", type="password")
     if api_key:
         genai.configure(api_key=api_key)
-        st.sidebar.success("API key configured successfully!")
         model_configured = True
     else:
         st.sidebar.warning("Please enter your Google API Key to continue")
@@ -99,6 +106,42 @@ retriever = load_retriever()
 # Add toggle for using retriever
 use_retriever = st.sidebar.checkbox("Use Retriever (RAG)", value=True, 
                                    help="Toggle to switch between using retrieval augmented generation or direct questioning")
+
+# Add button to rebuild index
+if st.sidebar.button("Rebuild FAISS Index"):
+    try:
+        st.sidebar.info("Rebuilding FAISS index... This may take a moment.")
+        
+        # Load documents from pickle
+        try:
+            with open('processed_news_docs.pkl', 'rb') as f:
+                docs = pickle.load(f)
+            
+            # Create embeddings with current model
+            embeddings = HuggingFaceEmbeddings(
+                model_name="sentence-transformers/distiluse-base-multilingual-cased-v1", 
+                model_kwargs={'device': device}
+            )
+            
+            # Remove old index if it exists
+            if os.path.exists("faiss_news_index"):
+                import shutil
+                shutil.rmtree("faiss_news_index")
+            
+            # Create new FAISS index
+            db = FAISS.from_documents(docs, embeddings)
+            
+            # Save for future use
+            db.save_local("faiss_news_index")
+            
+            # Reload retriever
+            retriever = load_retriever()
+            
+            st.sidebar.success("FAISS index rebuilt successfully!")
+        except Exception as e:
+            st.sidebar.error(f"Error rebuilding index: {str(e)}")
+    except Exception as e:
+        st.sidebar.error(f"Error: {str(e)}")
 
 # Display chat messages
 for message in st.session_state.messages:
@@ -125,14 +168,13 @@ if prompt := st.chat_input("Ask a question about the news articles..."):
             
             try:
                 # Create Gemini model
-                model = genai.GenerativeModel('gemini-2.0-flash')
+                model = genai.GenerativeModel('gemini-1.5-pro')
                 
                 if use_retriever and retriever is not None:
                     # Get relevant documents using the newer invoke method instead of deprecated get_relevant_documents
                     try:
-                        # Try the newer invoke method first
                         docs = retriever.invoke(prompt)
-                    except (AttributeError, TypeError):
+                    except (AttributeError, TypeError) as e:
                         # Fall back to the deprecated method if invoke is not available
                         docs = retriever.get_relevant_documents(prompt)
                     
@@ -141,29 +183,36 @@ if prompt := st.chat_input("Ask a question about the news articles..."):
                     
                     # Create prompt with context
                     system_prompt = f"""You are an AI assistant that helps recommend news articles related to the user question and answer the question.
-
-                    NOTE: 
-                    - Ignore part of the news that is not related to the question.
-                    - If no retrieved news are related to the question, say so.
-                    - Answer in the language of the USER QUESTION, either in English or Traditional Chinese.
                     
                     RELATED NEWS:
                     {context}
                     
-                    USER QUESTION:
-                    {prompt}
+                    YOUR TASK:
+                    - Answer using ONLY the retrieved news articles.
+                    - If NO retrieved news are related to the question, just say that the news archive does not contain news related to the question.
+                    - You MUST answer in the language of the USER QUESTION, either in English or Traditional Chinese.
                     
-                    Answer the question based only on the provided news articles. Structure your response by first providing the list of recommended news articles in the format :
+                    Structure your response by first providing the list of relevant news articles in the format :
                     - **title** - agency (hyperlink to url)
                     Then answer the question. If it is not a question, summarize the news articles.
 
+                    USER QUESTION:
+                    {prompt}
+
+                    THINK: What is the user asking? what language is the user asking in?
+                    
                     ANSWER:
                     """
                 else:
                     # Direct questioning without retrieval
                     system_prompt = f"""You are an AI assistant that helps recommend news articles related to the user query.
-
-                    NOTE: Answer in the language of the USER QUESTION, either in English or Traditional Chinese.
+                    
+                    YOUR TASK:
+                    - You MUST answer in the language of the USER QUESTION, either in English or Traditional Chinese.
+                    
+                    Structure your response by first providing the list of relevant news articles in the format :
+                    - **title** - agency (hyperlink to url)
+                    Then answer the question. If it is not a question, summarize the news articles.
                     
                     USER QUESTION:
                     {prompt}.
@@ -185,22 +234,7 @@ if prompt := st.chat_input("Ask a question about the news articles..."):
 
 # Sidebar information
 with st.sidebar:
-    st.header("About")
-    
-    st.header("System Status")
-    st.write(f"Device: {device}")
-    
     if retriever is not None:
         st.success("Retriever: Loaded ✅")
     else:
         st.error("Retriever: Not loaded ❌")
-    
-    st.write(f"RAG Mode: {'Enabled' if use_retriever else 'Disabled'}")
-        
-    st.header("Instructions")
-    st.markdown("""
-    1. Enter your Google API key in the sidebar
-    2. Choose whether to use the retriever (RAG) or not
-    3. Ask questions about natural disasters in the chat
-    4. The system will generate a response, with or without context from news articles
-    """)

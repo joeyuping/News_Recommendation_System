@@ -149,8 +149,8 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description='Scrape full content of news articles from a NewsAPI JSON file')
-    parser.add_argument('input_file', help='Path to the input JSON file')
-    parser.add_argument('--output-file', '-o', help='Path to the output JSON file')
+    parser.add_argument('-i', '--input-file', help='Path to the input JSON file')
+    parser.add_argument('-o', '--output-file', help='Path to the output JSON file')
     
     args = parser.parse_args()
     

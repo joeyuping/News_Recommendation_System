@@ -51,5 +51,5 @@ def gather_news_data(keyword, api_key, from_date=None, to_date=None, language='e
 # Call the function with your parameters
 if __name__ == "__main__":
     gather_news_data('地震災情與救援行動', 'f4b6348f8e5740b7a0a0fde0b65d2573', 
-                     from_date='2025-01-01', to_date='2025-04-09', 
+                     from_date='2025-03-14', to_date='2025-04-13', 
                      language='zh', sort_by='relevancy', page_size=100)
