@@ -140,12 +140,12 @@ if prompt := st.chat_input("Ask a question about the news articles..."):
                     context = "\n\n".join([doc.page_content for doc in docs])
                     
                     # Create prompt with context
-                    system_prompt = f"""You are an AI assistant that helps recommend news articles related to the user query and summarizes the articles.
+                    system_prompt = f"""You are an AI assistant that helps recommend news articles related to the user question and answer the question.
 
                     NOTE: 
-                    - Answer in the language of the USER QUESTION, either in English or Traditional Chinese.
                     - Ignore part of the news that is not related to the question.
                     - If no retrieved news are related to the question, say so.
+                    - Answer in the language of the USER QUESTION, either in English or Traditional Chinese.
                     
                     RELATED NEWS:
                     {context}
@@ -155,7 +155,7 @@ if prompt := st.chat_input("Ask a question about the news articles..."):
                     
                     Answer the question based only on the provided news articles. Structure your response by first providing the list of recommended news articles in the format :
                     - **title** - agency (hyperlink to url)
-                    Then summarize the articles, while also answering the user's query.
+                    Then answer the question. If it is not a question, summarize the news articles.
 
                     ANSWER:
                     """
