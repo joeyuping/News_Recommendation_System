@@ -60,16 +60,15 @@ def load_retriever():
             db.save_local("faiss_news_index")
             st.sidebar.success("Created and saved new FAISS index!")
             
-        return db.as_retriever(search_kwargs={"score_threshold": 0.7})
+        return db.as_retriever(search_kwargs={"k": 5})
     except Exception as e:
         st.sidebar.error(f"Error loading retriever: {str(e)}")
         return None
 
 # Main UI
-st.title("📰 News RAG Assistant")
+st.title("📰 News RAG Recommender System")
 st.markdown("""
-This app uses Retrieval Augmented Generation (RAG) with the Gemini 2.0 API to answer questions about news articles.
-The system has access to news articles about natural disasters like earthquakes and floods.
+This app uses Retrieval Augmented Generation (RAG) with the Gemini 2.0 API to recommend news articles.
 """)
 
 # Initialize session state for chat history
