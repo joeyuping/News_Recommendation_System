@@ -60,7 +60,7 @@ def load_retriever():
             db.save_local("faiss_news_index")
             st.sidebar.success("Created and saved new FAISS index!")
             
-        return db.as_retriever(search_kwargs={"score_threshold": 0.1})
+        return db.as_retriever(search_kwargs={"k": 5})
     except Exception as e:
         st.sidebar.error(f"Error loading retriever: {str(e)}")
         return None
@@ -125,7 +125,7 @@ if prompt := st.chat_input("Ask a question about the news articles..."):
             
             try:
                 # Create Gemini model
-                model = genai.GenerativeModel('gemini-2.5-pro-preview-03-25')
+                model = genai.GenerativeModel('gemini-2.0-flash')
                 
                 if use_retriever and retriever is not None:
                     # Get relevant documents using the newer invoke method instead of deprecated get_relevant_documents
@@ -140,23 +140,22 @@ if prompt := st.chat_input("Ask a question about the news articles..."):
                     context = "\n\n".join([doc.page_content for doc in docs])
                     
                     # Create prompt with context
-                    system_prompt = f"""You are an AI assistant that helps recommend news articles related to the user query and summarizes the articles. Use the following context to answer the user's question. 
+                    system_prompt = f"""You are an AI assistant that helps recommend news articles related to the user query and summarizes the articles.
 
                     NOTE: 
-                    - Answer in the language that the user uses, either in English or Traditional Chinese zh-tw.
-                    - If you don't know the answer based on the context, say so.
-                    - If the context could not answer the question, say so.
-                    - Ignore part of the context that is not related to the question.
+                    - Answer in the language of the USER QUESTION, either in English or Traditional Chinese.
+                    - Ignore part of the news that is not related to the question.
+                    - If no retrieved news are related to the question, say so.
                     
-                    CONTEXT:
+                    RELATED NEWS:
                     {context}
                     
                     USER QUESTION:
                     {prompt}
                     
-                    Answer the question based only on the provided context. Structure your response by first providing the list of recommended news articles in the format :
+                    Answer the question based only on the provided news articles. Structure your response by first providing the list of recommended news articles in the format :
                     - **title** - agency (hyperlink to url)
-                    Then summarize the articles.
+                    Then summarize the articles, while also answering the user's query.
 
                     ANSWER:
                     """
@@ -164,7 +163,7 @@ if prompt := st.chat_input("Ask a question about the news articles..."):
                     # Direct questioning without retrieval
                     system_prompt = f"""You are an AI assistant that helps recommend news articles related to the user query.
 
-                    NOTE: Answer in the language that the user uses, either in English or Traditional Chinese zh-tw.
+                    NOTE: Answer in the language of the USER QUESTION, either in English or Traditional Chinese.
                     
                     USER QUESTION:
                     {prompt}.
