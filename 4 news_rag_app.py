@@ -60,7 +60,7 @@ def load_retriever():
             db.save_local("faiss_news_index")
             st.sidebar.success("Created and saved new FAISS index!")
             
-        return db.as_retriever(search_kwargs={"score_threshold": 0.3})
+        return db.as_retriever(search_kwargs={"score_threshold": 0.1})
     except Exception as e:
         st.sidebar.error(f"Error loading retriever: {str(e)}")
         return None
@@ -125,7 +125,7 @@ if prompt := st.chat_input("Ask a question about the news articles..."):
             
             try:
                 # Create Gemini model
-                model = genai.GenerativeModel('gemini-2.0-flash')
+                model = genai.GenerativeModel('gemini-2.5-pro-preview-03-25')
                 
                 if use_retriever and retriever is not None:
                     # Get relevant documents using the newer invoke method instead of deprecated get_relevant_documents
@@ -143,9 +143,10 @@ if prompt := st.chat_input("Ask a question about the news articles..."):
                     system_prompt = f"""You are an AI assistant that helps recommend news articles related to the user query and summarizes the articles. Use the following context to answer the user's question. 
 
                     NOTE: 
-                    - Answer in the language that the user uses, either in English or Chinese.
+                    - Answer in the language that the user uses, either in English or Traditional Chinese zh-tw.
                     - If you don't know the answer based on the context, say so.
                     - If the context could not answer the question, say so.
+                    - Ignore part of the context that is not related to the question.
                     
                     CONTEXT:
                     {context}
@@ -163,7 +164,7 @@ if prompt := st.chat_input("Ask a question about the news articles..."):
                     # Direct questioning without retrieval
                     system_prompt = f"""You are an AI assistant that helps recommend news articles related to the user query.
 
-                    NOTE: Answer in the language that the user uses, either in English or Chinese.
+                    NOTE: Answer in the language that the user uses, either in English or Traditional Chinese zh-tw.
                     
                     USER QUESTION:
                     {prompt}.
