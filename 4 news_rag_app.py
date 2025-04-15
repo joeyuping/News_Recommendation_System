@@ -5,6 +5,7 @@ import google.generativeai as genai
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.load import loads
+import time
 
 # Disable Streamlit's file watcher to avoid PyTorch conflicts
 os.environ["STREAMLIT_SERVER_WATCH_FILES"] = "false"
@@ -170,18 +171,19 @@ if prompt := st.chat_input("Ask a question about the news articles..."):
                 # Create Gemini model
                 model = genai.GenerativeModel('gemini-1.5-pro')
                 
+                retrieval_time = None
+                llm_time = None
+                docs = None
+                # --- Time the retrieval step ---
                 if use_retriever and retriever is not None:
-                    # Get relevant documents using the newer invoke method instead of deprecated get_relevant_documents
+                    retrieval_start = time.time()
                     try:
                         docs = retriever.invoke(prompt)
                     except (AttributeError, TypeError) as e:
-                        # Fall back to the deprecated method if invoke is not available
                         docs = retriever.get_relevant_documents(prompt)
-                    
-                    # Format context from retrieved documents
+                    retrieval_end = time.time()
+                    retrieval_time = retrieval_end - retrieval_start
                     context = "\n\n".join([doc.page_content for doc in docs])
-                    
-                    # Create prompt with context
                     system_prompt = f"""You are an AI assistant that helps recommend news articles related to the user question and answer the question.
                     
                     RELATED NEWS:
@@ -195,16 +197,15 @@ if prompt := st.chat_input("Ask a question about the news articles..."):
                     Structure your response by first providing the list of relevant news articles in the format :
                     - **title** - agency (hyperlink to url)
                     Then answer the question. If it is not a question, summarize the news articles.
-
+                    
                     USER QUESTION:
                     {prompt}
-
+                    
                     THINK: What is the user asking? what language is the user asking in?
                     
                     ANSWER:
                     """
                 else:
-                    # Direct questioning without retrieval
                     system_prompt = f"""You are an AI assistant that helps recommend news articles related to the user query.
                     
                     YOUR TASK:
@@ -219,16 +220,21 @@ if prompt := st.chat_input("Ask a question about the news articles..."):
                     
                     ANSWER:
                     """
-                
-                # Generate response
+                # --- Time the LLM response step ---
+                llm_start = time.time()
                 response = model.generate_content(system_prompt)
+                llm_end = time.time()
+                llm_time = llm_end - llm_start
                 answer = response.text
-                
                 # Display response
-                message_placeholder.markdown(answer)
-                
+                timing_info = ""
+                if retrieval_time is not None:
+                    timing_info += f"\n\n**Retrieval time:** {retrieval_time:.2f} seconds"
+                if llm_time is not None:
+                    timing_info += f"\n**LLM response time:** {llm_time:.2f} seconds"
+                message_placeholder.markdown(answer + timing_info)
                 # Add assistant response to chat history
-                st.session_state.messages.append({"role": "assistant", "content": answer})
+                st.session_state.messages.append({"role": "assistant", "content": answer + timing_info})
             except Exception as e:
                 message_placeholder.error(f"Error: {str(e)}")
 
